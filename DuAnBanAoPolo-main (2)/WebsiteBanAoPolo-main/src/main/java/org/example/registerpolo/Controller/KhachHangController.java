@@ -24,10 +24,10 @@ public class KhachHangController {
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(required = false) Boolean updateSuccess,
             Model model) {
-        
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<KhachHang> khachHangPage = khachHangRepo.findAll(pageable);
-        
+
         // Log thông tin phân trang
         System.out.println("=== THÔNG TIN PHÂN TRANG ===");
         System.out.println("Trang hiện tại: " + page);
@@ -36,7 +36,7 @@ public class KhachHangController {
         System.out.println("Tổng số khách hàng: " + khachHangPage.getTotalElements());
         System.out.println("Số khách hàng trong trang hiện tại: " + khachHangPage.getContent().size());
         System.out.println("=========================");
-        
+
         if (updateSuccess != null) {
             if (updateSuccess) {
                 model.addAttribute("messageType", "success");
@@ -46,14 +46,14 @@ public class KhachHangController {
                 model.addAttribute("message", "Có lỗi xảy ra khi cập nhật thông tin khách hàng!");
             }
         }
-        
+
         model.addAttribute("khachHang", new KhachHang());
         model.addAttribute("listKhachHang", khachHangPage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", khachHangPage.getTotalPages());
         model.addAttribute("totalItems", khachHangPage.getTotalElements());
         model.addAttribute("size", size);
-        
+
         return "KhachHang/khach-hang";
     }
 
@@ -70,11 +70,28 @@ public class KhachHangController {
 
     // Form cập nhật khách hàng
     @PostMapping("/update/{id}")
-    public String updateKhachHang(@PathVariable int id, @ModelAttribute("khachHang") KhachHang khachHang) {
-        KhachHang existingKH = khachHangRepo.findById(id).orElse(null);
-        if (existingKH != null) {
+    public String updateKhachHang(@PathVariable int id, @ModelAttribute("khachHang") KhachHang khachHang, Model model) {
+        // Kiểm tra số điện thoại có đúng 10 số không
+        if (khachHang.getSdt() == null || !khachHang.getSdt().matches("\\d{10}")) {
+            model.addAttribute("messageType", "error");
+            model.addAttribute("message", "Số điện thoại phải có đúng 10 số!");
+            model.addAttribute("khachHang", khachHang);
+            return "KhachHang/UpdateKhachHang";
+        }
+
+        // Kiểm tra số điện thoại đã tồn tại chưa (trừ khách hàng hiện tại)
+        KhachHang existingKH = khachHangRepo.findBySdt(khachHang.getSdt());
+        if (existingKH != null && existingKH.getId() != id) {
+            model.addAttribute("messageType", "error");
+            model.addAttribute("message", "Số điện thoại " + khachHang.getSdt() + " đã tồn tại trong hệ thống!");
+            model.addAttribute("khachHang", khachHang);
+            return "KhachHang/UpdateKhachHang";
+        }
+
+        KhachHang existingKHToUpdate = khachHangRepo.findById(id).orElse(null);
+        if (existingKHToUpdate != null) {
             // Giữ lại mã KH
-            khachHang.setMaKH(existingKH.getMaKH());
+            khachHang.setMaKH(existingKHToUpdate.getMaKH());
             // Cập nhật trạng thái từ form
             System.out.println("Trạng thái mới: " + khachHang.getTrangThai());
             khachHangRepo.save(khachHang);
@@ -94,7 +111,24 @@ public class KhachHangController {
 
     // Xử lý lưu khách hàng
     @PostMapping("/add")
-    public String themKhachHang(@ModelAttribute("khachHang") KhachHang khachHang) {
+    public String themKhachHang(@ModelAttribute("khachHang") KhachHang khachHang, Model model) {
+        // Kiểm tra số điện thoại có đúng 10 số không
+        if (khachHang.getSdt() == null || !khachHang.getSdt().matches("\\d{10}")) {
+            model.addAttribute("messageType", "error");
+            model.addAttribute("message", "Số điện thoại phải có đúng 10 số!");
+            model.addAttribute("khachHang", khachHang);
+            return "KhachHang/AddKhachHang";
+        }
+
+        // Kiểm tra số điện thoại đã tồn tại chưa
+        KhachHang existingKhachHang = khachHangRepo.findBySdt(khachHang.getSdt());
+        if (existingKhachHang != null) {
+            model.addAttribute("messageType", "error");
+            model.addAttribute("message", "Số điện thoại " + khachHang.getSdt() + " đã tồn tại trong hệ thống!");
+            model.addAttribute("khachHang", khachHang);
+            return "KhachHang/AddKhachHang";
+        }
+
         khachHang.setMaKH(generateMaKH()); // Tự động tạo mã KH
         khachHang.setTrangThai(true); // Đảm bảo trạng thái true
         khachHangRepo.save(khachHang);
@@ -108,10 +142,10 @@ public class KhachHangController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
             Model model) {
-        
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<KhachHang> khachHangPage;
-        
+
         if (sdt != null && !sdt.trim().isEmpty()) {
             // Tìm kiếm theo số điện thoại
             KhachHang khachHang = khachHangRepo.findBySdt(sdt);
@@ -131,7 +165,7 @@ public class KhachHangController {
             // Nếu không có số điện thoại, hiển thị tất cả
             khachHangPage = khachHangRepo.findAll(pageable);
         }
-        
+
         // Log thông tin phân trang
         System.out.println("=== THÔNG TIN PHÂN TRANG TÌM KIẾM ===");
         System.out.println("Số điện thoại tìm kiếm: " + sdt);
@@ -141,7 +175,7 @@ public class KhachHangController {
         System.out.println("Tổng số khách hàng: " + khachHangPage.getTotalElements());
         System.out.println("Số khách hàng trong trang hiện tại: " + khachHangPage.getContent().size());
         System.out.println("=========================");
-        
+
         model.addAttribute("khachHang", new KhachHang());
         model.addAttribute("listKhachHang", khachHangPage.getContent());
         model.addAttribute("currentPage", page);
@@ -149,7 +183,7 @@ public class KhachHangController {
         model.addAttribute("totalItems", khachHangPage.getTotalElements());
         model.addAttribute("size", size);
         model.addAttribute("sdt", sdt); // Giữ lại giá trị tìm kiếm
-        
+
         return "KhachHang/khach-hang";
     }
 
@@ -164,4 +198,6 @@ public class KhachHangController {
         int number = Integer.parseInt(lastMa.substring(2)); // lấy số từ mã cuối
         return String.format("KH%03d", number + 1); // KH008
     }
+
+
 }

@@ -20,7 +20,17 @@
 <body class="bg-light">
 <div class="container">
     <div class="form-container">
-        <h2 class="mb-4 text-center text-primary">Cập nhật thông tin khách hàng</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-primary mb-0">Cập nhật thông tin khách hàng</h2>
+
+        </div>
+
+        <!-- Hiển thị thông báo lỗi -->
+        <div th:if="${messageType == 'error'}" class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span th:text="${message}"></span>
+        </div>
+
         <form th:action="@{|/khach-hang/update/${khachHang.id}|}" method="post" th:object="${khachHang}">
             <div class="mb-3">
                 <label class="form-label">Mã KH</label>
